@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpenseIT - Smart Receipt Scanner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192x192.svg">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="description" content="Smart expense tracking with OCR receipt scanning">
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <h1 class="app-title">ExpenseIT</h1>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <span class="theme-icon">🌙</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Receipt Entry Tab -->
+        <div class="tab-content active" id="receipt-entry">
+            <div class="receipt-entry-container">
+                <h2>Add New Expense</h2>
+                
+                <!-- Capture Options -->
+                <div class="capture-options">
+                    <button class="capture-btn" id="cameraBtn">
+                        <span class="icon">📷</span>
+                        Scan Receipt
+                    </button>
+                    <button class="capture-btn" id="uploadBtn">
+                        <span class="icon">📁</span>
+                        Upload Image
+                    </button>
+                    <button class="capture-btn" id="manualBtn">
+                        <span class="icon">✏️</span>
+                        Manual Entry
+                    </button>
+                </div>
+
+                <!-- Hidden file input -->
+                <input type="file" id="fileInput" accept="image/*" capture="environment" style="display: none;">
+                <input type="file" id="uploadInput" accept="image/*" style="display: none;">
+                <input type="file" id="manualAttachInput" accept="image/*" multiple style="display: none;">
+
+                <!-- Camera Modal -->
+                <div class="camera-modal" id="cameraModal" style="display: none;">
+                    <div class="camera-container">
+                        <div class="camera-header">
+                            <h3>Scan Receipt</h3>
+                            <button class="close-camera" id="closeCameraBtn">×</button>
+                        </div>
+                        <div class="camera-view">
+                            <video id="cameraVideo" autoplay playsinline></video>
+                            <canvas id="cameraCanvas" style="display: none;"></canvas>
+                        </div>
+                        <div class="camera-controls">
+                            <button class="btn-secondary" id="switchCameraBtn">🔄 Switch</button>
+                            <button class="btn-primary capture-btn-camera" id="captureBtn">📷 Capture</button>
+                            <button class="btn-secondary" id="cancelCameraBtn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Receipt Preview -->
+                <div class="receipt-preview" id="receiptPreview" style="display: none;">
+                    <img id="receiptImage" alt="Receipt preview">
+                    <button class="btn-secondary" id="retakeBtn">Retake</button>
+                </div>
+
+                <!-- Attached Files Display -->
+                <div class="attached-files" id="attachedFiles" style="display: none;">
+                    <h4>Attached Receipts</h4>
+                    <div class="attachments-grid" id="attachmentsGrid"></div>
+                </div>
+
+                <!-- Expense Form -->
+                <form class="expense-form" id="expenseForm">
+                    <div class="form-group full-width">
+                        <label for="merchant">Merchant *</label>
+                        <input type="text" id="merchant" name="merchant" required>
+                        <button type="button" class="btn-search" id="searchMerchant">🔍</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="category">Category *</label>
+                        <select id="category" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="hotel-lodging">Hotel & Lodging</option>
+                            <option value="customer-meeting">Customer Meeting</option>
+                            <option value="car-related">Car Related</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="office-supplies">Office Supplies</option>
+                            <option value="travel">Travel</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="food">Food</option>
+                            <option value="groceries">Groceries</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="date">Date *</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+
+                    <div class="form-group amount-group">
+                        <label for="amount">Amount *</label>
+                        <div class="amount-input">
+                            <input type="number" id="amount" name="amount" step="0.01" required>
+                            <div class="currency-select-container">
+                                <input type="text" id="currencySearch" class="currency-search" placeholder="Search currency..." readonly>
+                                <select id="currency" name="currency" class="currency-select" style="display: none;">
+                                    <option value="USD">$ USD - US Dollar</option>
+                                    <option value="EUR">€ EUR - Euro</option>
+                                    <option value="GBP">£ GBP - British Pound</option>
+                                    <option value="JPY">¥ JPY - Japanese Yen</option>
+                                    <option value="CAD">$ CAD - Canadian Dollar</option>
+                                    <option value="AUD">$ AUD - Australian Dollar</option>
+                                    <option value="CHF">₣ CHF - Swiss Franc</option>
+                                    <option value="CNY">¥ CNY - Chinese Yuan</option>
+                                    <option value="SEK">kr SEK - Swedish Krona</option>
+                                    <option value="NOK">kr NOK - Norwegian Krone</option>
+                                    <option value="DKK">kr DKK - Danish Krone</option>
+                                    <option value="PLN">zł PLN - Polish Zloty</option>
+                                    <option value="CZK">Kč CZK - Czech Koruna</option>
+                                    <option value="HUF">Ft HUF - Hungarian Forint</option>
+                                    <option value="RUB">₽ RUB - Russian Ruble</option>
+                                    <option value="BRL">R$ BRL - Brazilian Real</option>
+                                    <option value="MXN">$ MXN - Mexican Peso</option>
+                                    <option value="ARS">$ ARS - Argentine Peso</option>
+                                    <option value="CLP">$ CLP - Chilean Peso</option>
+                                    <option value="COP">$ COP - Colombian Peso</option>
+                                    <option value="INR">₹ INR - Indian Rupee</option>
+                                    <option value="KRW">₩ KRW - South Korean Won</option>
+                                    <option value="SGD">$ SGD - Singapore Dollar</option>
+                                    <option value="HKD">$ HKD - Hong Kong Dollar</option>
+                                    <option value="TWD">$ TWD - Taiwan Dollar</option>
+                                    <option value="THB">฿ THB - Thai Baht</option>
+                                    <option value="MYR">RM MYR - Malaysian Ringgit</option>
+                                    <option value="IDR">Rp IDR - Indonesian Rupiah</option>
+                                    <option value="PHP">₱ PHP - Philippine Peso</option>
+                                    <option value="VND">₫ VND - Vietnamese Dong</option>
+                                    <option value="ILS">₪ ILS - Israeli Shekel</option>
+                                    <option value="AED">د.إ AED - UAE Dirham</option>
+                                    <option value="SAR">﷼ SAR - Saudi Riyal</option>
+                                    <option value="QAR">﷼ QAR - Qatari Riyal</option>
+                                    <option value="KWD">د.ك KWD - Kuwaiti Dinar</option>
+                                    <option value="BHD">د.ب BHD - Bahraini Dinar</option>
+                                    <option value="OMR">﷼ OMR - Omani Rial</option>
+                                    <option value="JOD">د.أ JOD - Jordanian Dinar</option>
+                                    <option value="LBP">£ LBP - Lebanese Pound</option>
+                                    <option value="EGP">£ EGP - Egyptian Pound</option>
+                                    <option value="ZAR">R ZAR - South African Rand</option>
+                                    <option value="NGN">₦ NGN - Nigerian Naira</option>
+                                    <option value="KES">KSh KES - Kenyan Shilling</option>
+                                    <option value="GHS">₵ GHS - Ghanaian Cedi</option>
+                                    <option value="MAD">د.م. MAD - Moroccan Dirham</option>
+                                    <option value="TND">د.ت TND - Tunisian Dinar</option>
+                                    <option value="NZD">$ NZD - New Zealand Dollar</option>
+                                    <option value="FJD">$ FJD - Fijian Dollar</option>
+                                    <option value="PGK">K PGK - Papua New Guinea Kina</option>
+                                    <option value="TRY">₺ TRY - Turkish Lira</option>
+                                    <option value="BGN">лв BGN - Bulgarian Lev</option>
+                                    <option value="RON">lei RON - Romanian Leu</option>
+                                    <option value="HRK">kn HRK - Croatian Kuna</option>
+                                    <option value="RSD">дин RSD - Serbian Dinar</option>
+                                    <option value="UAH">₴ UAH - Ukrainian Hryvnia</option>
+                                    <option value="BYN">Br BYN - Belarusian Ruble</option>
+                                    <option value="ALL">L ALL - Albanian Lek</option>
+                                    <option value="MKD">ден MKD - Macedonian Denar</option>
+                                    <option value="ISK">kr ISK - Icelandic Krona</option>
+                                    <option value="LTL">Lt LTL - Lithuanian Litas</option>
+                                    <option value="LVL">Ls LVL - Latvian Lats</option>
+                                    <option value="EEK">kr EEK - Estonian Kroon</option>
+                                    <option value="AMD">֏ AMD - Armenian Dram</option>
+                                    <option value="GEL">₾ GEL - Georgian Lari</option>
+                                    <option value="AZN">₼ AZN - Azerbaijani Manat</option>
+                                    <option value="KZT">₸ KZT - Kazakhstani Tenge</option>
+                                    <option value="UZS">soʻm UZS - Uzbekistan Som</option>
+                                    <option value="KGS">с KGS - Kyrgyzstani Som</option>
+                                    <option value="TJS">смн TJS - Tajikistani Somoni</option>
+                                    <option value="TMT">m TMT - Turkmenistani Manat</option>
+                                    <option value="AFN">؋ AFN - Afghan Afghani</option>
+                                    <option value="PKR">₨ PKR - Pakistani Rupee</option>
+                                    <option value="BDT">৳ BDT - Bangladeshi Taka</option>
+                                    <option value="LKR">₨ LKR - Sri Lankan Rupee</option>
+                                    <option value="NPR">₨ NPR - Nepalese Rupee</option>
+                                    <option value="BTN">Nu BTN - Bhutanese Ngultrum</option>
+                                    <option value="MVR">ރ MVR - Maldivian Rufiyaa</option>
+                                    <option value="LAK">₭ LAK - Lao Kip</option>
+                                    <option value="KHR">៛ KHR - Cambodian Riel</option>
+                                    <option value="MMK">K MMK - Myanmar Kyat</option>
+                                    <option value="BND">$ BND - Brunei Dollar</option>
+                                    <option value="MNT">₮ MNT - Mongolian Tugrik</option>
+                                </select>
+                                <div class="currency-dropdown" id="currencyDropdown">
+                                    <div class="currency-search-container">
+                                        <input type="text" id="currencySearchInput" class="currency-search-input" placeholder="Search currencies...">
+                                    </div>
+                                    <div class="currency-options" id="currencyOptions"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="paymentMethod">Payment Method *</label>
+                        <div class="payment-row">
+                            <select id="paymentMethod" name="paymentMethod" required>
+                                <option value="">Select Payment Method</option>
+                                <option value="cash">Cash</option>
+                                <option value="credit-card">Credit Card</option>
+                                <option value="app">App</option>
+                                <option value="wire-transfer">Wire Transfer</option>
+                                <option value="check">Check</option>
+                            </select>
+                            <input type="text" id="paymentDetails" name="paymentDetails" placeholder="Details (optional)" class="payment-details-input">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="costCenter">Cost Center</label>
+                        <input type="text" id="costCenter" name="costCenter" placeholder="Department, Cost Center or PO# (optional)">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="notes">Notes</label>
+                        <textarea id="notes" name="notes" rows="2" placeholder="Add Notes about this expense"></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Attach Receipts</label>
+                        <div class="attachments-section">
+                            <button type="button" class="btn-secondary" id="attachReceiptBtn">📎 Attach Receipt</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Attendees</label>
+                        <div class="attendees-section" id="attendeesSection">
+                            <button type="button" class="btn-secondary" id="addAttendeeBtn">+ Add Attendee</button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions full-width">
+                        <button type="button" class="btn-secondary" id="clearForm">Clear</button>
+                        <button type="submit" class="btn-primary">Save Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- My Expenses Tab -->
+        <div class="tab-content" id="my-expenses">
+            <div class="expenses-container">
+                <div class="expenses-header">
+                    <h2>My Expenses</h2>
+                    <div class="expenses-actions">
+                        <button class="btn-primary" id="exportBtn">📊 Export CSV</button>
+                        <select id="filterCategory" class="filter-select">
+                            <option value="">All Categories</option>
+                            <option value="hotel-lodging">Hotel & Lodging</option>
+                            <option value="customer-meeting">Customer Meeting</option>
+                            <option value="car-related">Car Related</option>
+                            <option value="transportation">Transportation</option>
+                            <option value="office-supplies">Office Supplies</option>
+                            <option value="travel">Travel</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="food">Food</option>
+                            <option value="groceries">Groceries</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="expenses-list" id="expensesList">
+                    <div class="empty-state">
+                        <p>No expenses recorded yet</p>
+                        <p>Start by adding your first expense!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings">
+            <div class="settings-container">
+                <h2>Settings</h2>
+                
+                <div class="settings-section">
+                    <h3>Preferences</h3>
+                    <div class="setting-item">
+                        <label for="defaultCurrency">Default Currency</label>
+                        <select id="defaultCurrency">
+                            <option value="USD">USD - US Dollar</option>
+                            <option value="EUR">EUR - Euro</option>
+                            <option value="ILS">ILS - Israeli Shekel</option>
+                            <option value="GBP">GBP - British Pound</option>
+                            <option value="JPY">JPY - Japanese Yen</option>
+                            <option value="CAD">CAD - Canadian Dollar</option>
+                            <option value="AUD">AUD - Australian Dollar</option>
+                            <option value="AED">AED - UAE Dirham</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="autoSuggestMerchants">Auto-suggest Merchants</label>
+                        <input type="checkbox" id="autoSuggestMerchants" checked>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="autoCategorizeMerchants">Auto-categorize Merchants</label>
+                        <input type="checkbox" id="autoCategorizeMerchants" checked>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="dateFormat">Date Format</label>
+                        <select id="dateFormat">
+                            <option value="DD/MM/YYYY">DD/MM/YYYY (European)</option>
+                            <option value="MM/DD/YYYY">MM/DD/YYYY (US)</option>
+                            <option value="YYYY/MM/DD">YYYY/MM/DD (ISO)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h3>Data Management</h3>
+                    <button class="btn-secondary" id="clearAllData">Clear All Data</button>
+                    <button class="btn-secondary" id="exportAllData">Export All Data</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Tab -->
+        <div class="tab-content" id="about">
+            <div class="about-container">
+                <h2>About ExpenseIT</h2>
+                
+                <div class="about-content">
+                    <div class="app-info">
+                        <h3>Smart Expense Tracking</h3>
+                        <p>ExpenseIT is a comprehensive expense tracking application designed to simplify receipt management and expense reporting. With advanced OCR capabilities and smart categorization, managing your expenses has never been easier.</p>
+                    </div>
+                    
+                    <div class="features-list">
+                        <h3>Features</h3>
+                        <ul>
+                            <li>📱 Camera receipt scanning</li>
+                            <li>🤖 OCR text extraction</li>
+                            <li>🏷️ Smart categorization</li>
+                            <li>💱 Multi-currency support</li>
+                            <li>📊 CSV export</li>
+                            <li>👥 Attendee tracking</li>
+                            <li>🌙 Dark/Light theme</li>
+                            <li>📱 Mobile responsive</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="version-info">
+                        <p><strong>Version:</strong> 1.0.0</p>
+                        <p><strong>Built with:</strong> HTML5, CSS3, JavaScript</p>
+                        <p><strong>OCR:</strong> Tesseract.js</p>
+                    </div>
+
+                    <!-- Open Source Disclaimer -->
+                    <div class="open-source-section">
+                        <h3>🚀 Open Source Project</h3>
+                        <div class="disclaimer-content">
+                            <p>ExpenseIT is proudly <strong>open source</strong> and available to the global developer community. This project embodies the spirit of collaborative innovation, where great ideas flourish through shared knowledge and community contribution.</p>
+                            
+                            <div class="open-source-features">
+                                <div class="feature-card">
+                                    <h4>🔧 Customize & Extend</h4>
+                                    <p>Tailor ExpenseIT to your specific needs. Replace the OCR engine, add new features, or integrate with your existing systems - the choice is yours.</p>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <h4>🤝 Community Driven</h4>
+                                    <p>Join a vibrant community of developers who believe in transparent, collaborative software development. Your contributions help make ExpenseIT better for everyone.</p>
+                                </div>
+                                
+                                <div class="feature-card">
+                                    <h4>🎯 Your Project, Your Rules</h4>
+                                    <p>Use ExpenseIT as a foundation for your own expense tracking solution. No restrictions, no vendor lock-in - just pure, extensible code.</p>
+                                </div>
+                            </div>
+
+                            <div class="github-section">
+                                <div class="github-link">
+                                    <svg class="github-logo" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                        <path d="M12 0C5.374 0 0 5.373 0 12 0 17.302 3.438 21.8 8.207 23.387c.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+                                    </svg>
+                                    <div class="github-info">
+                                        <h4>Explore the Code</h4>
+                                        <p>Fork, star, and contribute on GitHub</p>
+                                        <a href="https://github.com/benarch" target="_blank" rel="noopener noreferrer" class="github-button">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                                <path d="M12 0C5.374 0 0 5.373 0 12 0 17.302 3.438 21.8 8.207 23.387c.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/>
+                                            </svg>
+                                            github.com/benarch
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="disclaimer-note">
+                                <h4>⚠️ Important Notice</h4>
+                                <p>This is an open source project provided <strong>"as-is"</strong> with no warranties or guarantees. While we're passionate about this project, please note:</p>
+                                <ul>
+                                    <li>No commitment to maintenance schedules or roadmap timelines</li>
+                                    <li>Community contributions are welcomed but not guaranteed to be merged</li>
+                                    <li>Use at your own discretion for personal or commercial projects</li>
+                                    <li>Consider this as a foundation to build upon rather than a finished product</li>
+                                </ul>
+                                <p class="inspire-text">We believe great software comes from passionate communities. Whether you're fixing bugs, adding features, or simply using ExpenseIT for your own needs - you're part of something bigger. <strong>Let's build the future of expense tracking together!</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="receipt-entry">
+            <span class="nav-icon">📝</span>
+            <span class="nav-label">Receipt Entry</span>
+        </button>
+        <button class="nav-item" data-tab="my-expenses">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">My Expenses</span>
+        </button>
+        <button class="nav-item" data-tab="settings">
+            <span class="nav-icon">⚙️</span>
+            <span class="nav-label">Settings</span>
+        </button>
+        <button class="nav-item" data-tab="about">
+            <span class="nav-icon">ℹ️</span>
+            <span class="nav-label">About</span>
+        </button>
+    </nav>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Processing receipt...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
